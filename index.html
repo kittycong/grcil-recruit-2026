@@ -361,6 +361,21 @@
   .warnline{
     font-size:12px;color:var(--warn);margin-top:5px;font-weight:500;
   }
+
+  /* 할 일 → 그 일에 쓸 문안·자료로 건너뛰기 */
+  button.jump{
+    font:inherit;font-size:11.5px;font-weight:700;
+    border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent-ink);
+    border-radius:3px;padding:1px 9px;cursor:pointer;
+  }
+  button.jump::after{content:" →";opacity:.7}
+  button.jump:hover{background:var(--accent);color:#fff}
+  :root[data-theme="dark"] button.jump:hover,
+  html:not([data-theme="light"]) button.jump:hover{color:#0E141A}
+  button.jump:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .wtask button.jump{margin-top:5px}
+  .witem.flash{animation:flash 1.4s ease-out}
+  @keyframes flash{from{background:var(--accent-soft)}to{background:transparent}}
   li.task.flag .warnline{color:var(--alert)}
 
   /* 할 일 — 보기 전환 */
@@ -1054,6 +1069,38 @@ const chipsEl=document.getElementById("chips");
 
 function taskId(t){return t[0]+"|"+t[2].slice(0,28)}
 
+// 이 할 일에 쓸 문안·자료가 있으면 「실무 작업목록」의 그 자리로 건너뛰는 단추를 만든다.
+// 없으면 null 을 돌려준다.
+function workJumpButton(t){
+  if(!t[3].includes("실무 담당")) return null;
+  const idx=T.indexOf(t);
+  if(idx<0) return null;
+  const keys=docsFor(t[2]+" "+(t[4]||""));
+  if(!keys.length) return null;
+
+  const b=document.createElement("button");
+  b.type="button"; b.className="jump";
+  b.textContent = keys.length>1
+    ? keys[0]+" 외 "+(keys.length-1)+"건 보기"
+    : keys[0]+" 보기";
+  b.title="실무 작업목록에서 이 문안을 펼쳐 보여줍니다";
+
+  b.addEventListener("click",()=>{
+    setTab("work");
+    const el=document.querySelector('#worklist [data-tidx="'+idx+'"]');
+    if(!el) return;
+    const det=el.closest("details.wday");
+    if(det) det.open=true;
+    const chip=el.querySelector(".wchip");
+    if(chip && !chip.classList.contains("open")) chip.click();
+    el.classList.remove("flash");
+    void el.offsetWidth;
+    el.classList.add("flash");
+    el.scrollIntoView({behavior:"smooth",block:"center"});
+  });
+  return b;
+}
+
 // ── 준비물에서 바로 내려받기 ──────────────────────────
 // files/ 폴더에 「서식-01.hwpx」처럼 넣어 두면 준비물의 「서식 01」이
 // 자동으로 내려받기 단추가 된다. 파일이 없으면 그냥 글자로 남는다.
@@ -1213,6 +1260,8 @@ function render(){
         c.textContent=x.trim(); meta.appendChild(c);
       });
     }
+    const jump=workJumpButton(t);
+    if(jump) meta.appendChild(jump);
     bd.appendChild(meta);
     if(note){const n=document.createElement("p");n.className="warnline";n.textContent=note;bd.appendChild(n)}
     li.append(cb,tm,bd);
@@ -1454,6 +1503,8 @@ function renderWeek(){
         const w=document.createElement("span"); w.className="wwho"; w.textContent=t[3].join(" · ");
         body.appendChild(w);
       }
+      const jump=workJumpButton(t);
+      if(jump) body.appendChild(jump);
       row.append(cb,body); cell.appendChild(row);
     });
 
@@ -1994,6 +2045,7 @@ function renderWork() {
       box.appendChild(sec); wrap = sec;
     }
     const it = document.createElement("div"); it.className = "witem";
+    it.dataset.tidx = T.indexOf(t);
     const tm = document.createElement("span");
     tm.className = "wt" + (level === 1 && time ? " hard" : "");
     tm.textContent = time || "—";
