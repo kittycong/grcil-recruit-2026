@@ -779,6 +779,9 @@
     <div class="navtools">
       <button type="button" id="btn-print">이 탭 인쇄</button>
       <button type="button" id="btn-memo">메모 숨기기</button>
+      <button type="button" id="btn-export">기록 내보내기</button>
+      <button type="button" id="btn-import">기록 불러오기</button>
+      <input type="file" id="file-import" accept="application/json,.json" hidden>
     </div>
   </div>
 
@@ -1108,24 +1111,32 @@ function workJumpButton(t){
 // 대외비 문서는 여기에 올리지 않는다 — 이 사이트는 누구나 볼 수 있다.
 //   실기 과제지 / 모범답안·채점표 / 응시번호·성명 대조표(03) / 편의 제공 접수·처리표(04)
 const DL_ALLOW=["01","02","05","06","07","08","09","10","11","12"];
-const DL_PATH=n=>"files/서식-"+n+".hwpx";
-const DL_OK={};
+const DL_OK={};   // 번호 → 파일 경로
 
+// manifest.json 은 두 가지 꼴을 다 받는다.
+//   ["01","05"]                        → files/서식-01.hwpx 를 찾는다
+//   {"01":"일정기준표.hwp","05":"…"}   → 파일 이름을 직접 적는다 (확장자 아무거나)
 async function probeFiles(){
   try{
     const r=await fetch("files/manifest.json",{cache:"no-store"});
     if(!r.ok) return;
-    const list=await r.json();
-    (Array.isArray(list)?list:[]).forEach(n=>{
+    const raw=await r.json();
+
+    const add=(n,file)=>{
       const k=String(n).padStart(2,"0");
-      if(DL_ALLOW.includes(k)) DL_OK[k]=true;
-    });
+      if(DL_ALLOW.includes(k)) DL_OK[k]="files/"+(file||("서식-"+k+".hwpx"));
+    };
+
+    if(Array.isArray(raw)) raw.forEach(n=>add(n));
+    else if(raw && typeof raw==="object") Object.entries(raw).forEach(([n,f])=>add(n,f));
   }catch(e){}
 }
 
 function linkPrep(html){
   return String(html||"").replace(/서식\s*(\d{2})/g,(whole,n)=>
-    DL_OK[n] ? '<a class="dl" href="'+DL_PATH(n)+'" download>'+whole+'</a>' : whole);
+    DL_OK[n]
+      ? '<a class="dl" href="'+encodeURI(DL_OK[n])+'" download>'+whole+'</a>'
+      : whole);
 }
 
 // 날짜 표기 → 실제 달력 날짜
@@ -1985,20 +1996,52 @@ const VIEW = {
 12 인사기록 편철 목록      「여기 넣지 않는 것」 표 포함`]
 };
 
+// 할 일 문장에 왼쪽 구절이 들어 있으면 오른쪽 문서를 펼쳐 보여준다.
+// 짝은 할 일의 본문(t[2])과 근거 문서(t[4])에서만 찾는다 — 시각 칸은 보지 않는다.
 const WORKDOC = {
+  // 위원에게 보내는 자료
   "교체된 문서 10종": ["서식 목록"],
+  "문서 묶음을 목록과 대조": ["서식 목록"],
   "인사위원회 소집 기안": ["위원 발송 8종"],
   "위원 5명에게 통지": ["위원 발송 8종"],
+  "위원 5명에게 자료 8종": ["위원 발송 8종"],
+  "3번 파일은 그대로 보내지 말 것": ["위원 발송 8종"],
+  "8종 외의 자료는 보내지 않는다": ["위원 발송 8종"],
+
+  // 응시자에게 나가는 통지
   "내일 쓸 메일 초안": ["문안 · 서류합격", "문안 · 불합격", "문안 · 심사제외", "문자 문안"],
   "합격자 통지": ["문안 · 서류합격", "문자 문안"],
   "불합격자·심사 제외자": ["문안 · 불합격", "문안 · 심사제외"],
   "홈페이지에 합격자": ["문안 · 홈페이지 공지"],
-  "조별": ["실기 진행 10단계"],
-  "채점위원 3명에게": ["9. 30. 채점·환산 순서"],
-  "최종 환산표 작성": ["9. 30. 채점·환산 순서"],
+  "편의 신청 마감": ["문안 · 서류합격"],
+  "도착 시각에 오지 않은 응시자": ["문자 문안"],
+  "시각표 통보": ["문자 문안"],
   "응시자 전원에게 최종 결과": ["문안 · 최종합격"],
+  "적격 확인 서류 접수": ["문안 · 최종합격"],
+
+  // 시험 당일
+  "신분증 본인 확인": ["실기 진행 10단계"],
+  "시험 중 자리를 비우지 않는다": ["실기 진행 10단계"],
+  "종료 후 마무리 5분": ["실기 진행 10단계"],
+  "PC는 AI 로그인 상태로": ["실기 진행 10단계"],
+  "대화창 전체와 첨부 파일 삭제": ["실기 진행 10단계"],
+  "부정행위를 발견하면": ["실기 진행 10단계"],
+  "시험실 세팅": ["실기 진행 10단계"],
+  "과제지·답안 파일 사본": ["실기 진행 10단계"],
+
+  // 채점과 환산
+  "채점위원 3명에게": ["9. 30. 채점·환산 순서"],
+  "인정 범위 확정": ["9. 30. 채점·환산 순서"],
+  "독립 채점": ["9. 30. 채점·환산 순서"],
+  "최종 환산표 작성": ["9. 30. 채점·환산 순서"],
+  "검산 6개 항목": ["9. 30. 채점·환산 순서"],
+  "검토의견서를 대표에게 제출": ["9. 30. 채점·환산 순서"],
+
+  // 기록 정리
   "채용서류 파기": ["파기 대상"],
-  "편의 신청 마감": ["문안 · 서류합격"]
+  "인사기록 편철 완료": ["서식 목록"],
+  "시용기간 일정 산출": ["서식 목록"],
+  "신규 입사 행정처리": ["서식 목록"]
 };
 
 function docsFor(text) {
@@ -2631,6 +2674,51 @@ function setMemo(on){
   memoBtn.textContent = on ? "메모 숨기기" : "메모 보이기";
 }
 memoBtn.addEventListener("click",()=>setMemo(!memoOn));
+
+// ── 기록 내보내기·불러오기 ────────────────────────────
+// 체크 표시와 메모는 이 브라우저에만 남는다. 파일로 빼 두면
+// 브라우저를 정리해도 되살릴 수 있고, 다른 사람에게 넘길 수도 있다.
+document.getElementById("btn-export").addEventListener("click",()=>{
+  const data={};
+  for(let i=0;i<localStorage.length;i++){
+    const k=localStorage.key(i);
+    if(k && k.indexOf(KEY+":")===0) data[k.slice(KEY.length+1)]=localStorage.getItem(k);
+  }
+  const blob=new Blob(
+    [JSON.stringify({v:1, 저장시각:new Date().toISOString(), data}, null, 2)],
+    {type:"application/json"}
+  );
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="채용실무_기록_"+iso(new Date())+".json";
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+});
+
+document.getElementById("btn-import").addEventListener("click",()=>{
+  document.getElementById("file-import").click();
+});
+
+document.getElementById("file-import").addEventListener("change",e=>{
+  const file=e.target.files && e.target.files[0];
+  if(!file) return;
+  const fr=new FileReader();
+  fr.onload=()=>{
+    try{
+      const parsed=JSON.parse(fr.result);
+      const d=parsed && parsed.data;
+      if(!d || typeof d!=="object") throw new Error("이 파일에는 기록이 없습니다");
+      const n=Object.keys(d).length;
+      if(!confirm("기록 "+n+"개를 불러옵니다. 지금 이 브라우저에 있는 체크와 메모는 덮어씁니다. 계속할까요?")) return;
+      Object.entries(d).forEach(([k,v])=>localStorage.setItem(KEY+":"+k, v));
+      location.reload();
+    }catch(err){
+      alert("불러오지 못했습니다 — "+err.message);
+    }
+  };
+  fr.readAsText(file,"utf-8");
+  e.target.value="";
+});
 
 // ── 인쇄 (열려 있는 탭만, 한 장에 맞춰) ────────────────
 function fitPrint(){
