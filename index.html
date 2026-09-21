@@ -473,6 +473,32 @@
   .lv3 .lvtag{background:var(--done-soft);border-color:var(--done);color:var(--done)}
   .dup-when{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
   .dupitem h4{font-family:"Noto Serif KR",serif;font-size:15px;margin:0 0 6px;line-height:1.45;text-wrap:balance}
+
+  /* 겹치는 업무 — 접었다 편다 */
+  details.dupitem{padding:0}
+  details.dupitem>summary{
+    list-style:none;cursor:pointer;padding:13px 16px 13px 38px;position:relative;
+  }
+  details.dupitem>summary::-webkit-details-marker{display:none}
+  details.dupitem>summary::before{
+    content:"";position:absolute;left:16px;top:20px;
+    width:6px;height:6px;border-right:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);
+    transform:rotate(-45deg);transition:transform .15s;
+  }
+  details.dupitem[open]>summary::before{transform:rotate(45deg);top:18px}
+  details.dupitem>summary:hover{background:var(--surface-2)}
+  details.dupitem>summary:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+  .dup-title{font-family:"Noto Serif KR",serif;font-size:15px;line-height:1.45;text-wrap:balance;display:block}
+  .dup-more{padding:0 16px 14px 38px}
+  .dupbulk{
+    display:flex;gap:8px;align-items:center;margin-top:16px;
+    font-size:12px;color:var(--muted);
+  }
+  .dupbulk button{
+    font:inherit;font-size:12px;border:1px solid var(--line-2);background:var(--surface-2);
+    color:var(--ink-2);border-radius:3px;padding:3px 11px;cursor:pointer;
+  }
+  .dupbulk button:hover{border-color:var(--accent);color:var(--accent-ink)}
   .dup-body{font-size:13.5px;color:var(--ink-2);margin:0 0 9px;line-height:1.65}
   .dup-fix{
     font-size:13px;background:var(--surface-2);border-radius:3px;padding:9px 11px;margin:0;color:var(--ink-2);
@@ -548,6 +574,7 @@
     <button class="tab" type="button" role="tab" data-panel="forms" aria-selected="false">서식</button>
     <button class="tab" type="button" role="tab" data-panel="docs" aria-selected="false">문서</button>
     <button class="tab" type="button" role="tab" data-panel="flow" aria-selected="false">전체 흐름</button>
+    <button class="tab" type="button" role="tab" data-panel="dup" aria-selected="false">겹치는 업무</button>
   </div>
 
   <div class="panes">
@@ -1326,14 +1353,31 @@ const DUP=[
 function renderDup(){
   const box=document.getElementById("duplist"); box.innerHTML="";
   DUP.forEach(([title,level,when,body,fix])=>{
-    const d=document.createElement("div");
+    const d=document.createElement("details");
     d.className="dupitem lv"+level;
-    d.innerHTML='<div class="dup-head"><span class="lvtag">'+(level===1?"충돌":level===2?"주의":"정리하면 이득")+'</span>'+
-      '<span class="dup-when">'+when+'</span></div>'+
-      '<h4>'+title+'</h4><p class="dup-body">'+body+'</p>'+
-      '<p class="dup-fix"><b>이렇게 하세요 — </b>'+fix+'</p>';
+    d.innerHTML='<summary><span class="dup-head"><span class="lvtag">'+(level===1?"충돌":level===2?"주의":"정리하면 이득")+'</span>'+
+      '<span class="dup-when">'+when+'</span></span>'+
+      '<span class="dup-title">'+title+'</span></summary>'+
+      '<div class="dup-more"><p class="dup-body">'+body+'</p>'+
+      '<p class="dup-fix"><b>이렇게 하세요 — </b>'+fix+'</p></div>';
     box.appendChild(d);
   });
+
+  const bulk=document.createElement("div");
+  bulk.className="dupbulk";
+  const all=document.createElement("button");
+  all.type="button"; all.textContent="모두 펼치기";
+  all.addEventListener("click",()=>{
+    const items=[...box.querySelectorAll("details.dupitem")];
+    const open=items.some(x=>!x.open);
+    items.forEach(x=>{x.open=open});
+    all.textContent = open ? "모두 접기" : "모두 펼치기";
+  });
+  bulk.appendChild(all);
+  const hint=document.createElement("span");
+  hint.textContent="제목을 누르면 그 항목만 펼쳐집니다.";
+  bulk.appendChild(hint);
+  box.appendChild(bulk);
 }
 
 
@@ -2023,7 +2067,8 @@ const PANELS={
   tasks:["panel-tasks-progress","list"],
   work:["panel-work"],
   msg:["panel-msg"],
-  cal:["panel-cal"], forms:["panel-forms"], docs:["panel-docs"], flow:["panel-flow"]
+  cal:["panel-cal"], forms:["panel-forms"], docs:["panel-docs"], flow:["panel-flow"],
+  dup:["panel-dup"]
 };
 function setTab(name){
   tab=name; store.set("tab",name);
