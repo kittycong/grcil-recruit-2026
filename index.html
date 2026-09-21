@@ -356,11 +356,13 @@
   .weeknav button:hover{border-color:var(--accent);color:var(--accent-ink)}
   .weeknav .spacer{flex:1}
 
-  /* 칸이 170px 아래로 눌리면 줄 수를 스스로 줄인다 (7 → 4 → 3 → 2 → 1) */
+  /* 이틀치 두 칸. 화면이 좁으면 한 칸씩 위아래로 */
   .weekgrid{
-    display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:1px;
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1px;
     background:var(--line);border:1px solid var(--line);border-radius:4px;overflow:hidden;
   }
+  .weeknav button:disabled{opacity:.35;cursor:default;border-color:var(--line)}
+  .weeknav button:disabled:hover{color:var(--ink-2)}
   .wcell{background:var(--surface);min-height:170px;padding:9px 10px;display:flex;flex-direction:column;gap:7px}
   .wcell.off{background:var(--surface-2)}
   .wcell.today{box-shadow:inset 0 0 0 2px var(--accent)}
@@ -775,7 +777,7 @@
   <div id="tasksbody">
     <div class="viewtoggle" id="viewtoggle" role="group" aria-label="할 일 보기 방식">
       <button type="button" data-view="list" aria-pressed="true">날짜순 목록</button>
-      <button type="button" data-view="week" aria-pressed="false">주간 달력</button>
+      <button type="button" data-view="week" aria-pressed="false">이틀씩 보기</button>
     </div>
     <main id="list"></main>
     <section id="weekwrap" hidden>
@@ -1268,7 +1270,8 @@ function renderToday(){
 
 // ── 주간 달력 ────────────────────────────────────────
 let taskView = store.get("taskview","list");
-let weekAnchor = null;
+let dayPage = null;
+const PER_PAGE = 2;
 
 const DOW=["일","월","화","수","목","금","토"];
 const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
@@ -1293,13 +1296,27 @@ function tasksByDay(){
   return map;
 }
 
-function defaultWeek(){
-  const map=tasksByDay();
-  const days=Object.keys(map).sort();
-  if(!days.length) return sundayOf(new Date());
+// 할 일이 있는 평일만 — 토·일과 공휴일·연휴는 뺀다.
+function workDates(map){
+  return Object.keys(map).filter(d=>{
+    if(!map[d].length) return false;
+    if(HOLIDAYS.includes(d)) return false;
+    const w=new Date(d+"T00:00:00").getDay();
+    return w!==0 && w!==6;
+  }).sort();
+}
+
+const dayLabel=d=>{
+  const x=new Date(d+"T00:00:00");
+  return (x.getMonth()+1)+". "+x.getDate()+".("+DOW[x.getDay()]+")";
+};
+
+// 오늘이 든 쪽, 없으면 다가오는 날이 든 쪽
+function defaultPage(dates){
   const today=iso(new Date());
-  const hit = days.includes(today) ? today : (days.find(d=>d>=today) || days[days.length-1]);
-  return sundayOf(new Date(hit+"T00:00:00"));
+  let i=dates.findIndex(d=>d>=today);
+  if(i<0) i=dates.length-1;
+  return Math.floor(i/PER_PAGE);
 }
 
 function setTaskView(v){
@@ -1313,53 +1330,54 @@ function setTaskView(v){
 }
 
 function renderWeek(){
-  if(!weekAnchor) weekAnchor=defaultWeek();
   const map=tasksByDay();
-  const start=weekAnchor;
   const today=iso(new Date());
-
-  // 주말은 빼고 월~금만 보여준다. 주말에 할 일이 있으면 그 칸만 뒤에 붙인다.
-  const offsets=[1,2,3,4,5];
-  [6,0].forEach(o=>{ if((map[iso(addDays(start,o))]||[]).length) offsets.push(o) });
-  offsets.sort((a,b)=>(a===0?7:a)-(b===0?7:b));
-
-  let count=0;
-  offsets.forEach(o=>{ count += (map[iso(addDays(start,o))]||[]).length });
+  const dates=workDates(map);
 
   const nav=document.getElementById("weeknav"); nav.innerHTML="";
-  const prev=document.createElement("button"); prev.type="button"; prev.textContent="‹ 지난주";
-  prev.addEventListener("click",()=>{weekAnchor=addDays(start,-7);renderWeek()});
+  const grid=document.getElementById("weekview"); grid.innerHTML="";
+
+  if(!dates.length){
+    const e=document.createElement("span"); e.className="wkcount";
+    e.textContent="이 역할에 잡힌 일이 없습니다.";
+    nav.appendChild(e);
+    return;
+  }
+
+  const pages=Math.ceil(dates.length/PER_PAGE);
+  if(dayPage===null) dayPage=defaultPage(dates);
+  dayPage=Math.min(Math.max(dayPage,0),pages-1);
+  const shown=dates.slice(dayPage*PER_PAGE, dayPage*PER_PAGE+PER_PAGE);
+
+  let count=0; shown.forEach(d=>{count+=map[d].length});
+
+  const prev=document.createElement("button"); prev.type="button"; prev.textContent="‹ 이전";
+  prev.disabled = dayPage===0;
+  prev.addEventListener("click",()=>{dayPage--;renderWeek()});
   const title=document.createElement("span"); title.className="wk";
-  const fmt=d=>(d.getMonth()+1)+". "+d.getDate()+".";
-  title.textContent=start.getFullYear()+". "+fmt(addDays(start,1))+" ~ "+fmt(addDays(start,5));
+  title.textContent=shown.map(dayLabel).join("   ·   ");
   const cnt=document.createElement("span"); cnt.className="wkcount";
-  cnt.textContent="이 주 할 일 "+count+"건";
-  const next=document.createElement("button"); next.type="button"; next.textContent="다음주 ›";
-  next.addEventListener("click",()=>{weekAnchor=addDays(start,7);renderWeek()});
-  const now=document.createElement("button"); now.type="button"; now.textContent="이번 주";
-  now.addEventListener("click",()=>{weekAnchor=sundayOf(new Date());renderWeek()});
+  cnt.textContent="할 일 "+count+"건 · "+(dayPage+1)+" / "+pages+"쪽";
+  const now=document.createElement("button"); now.type="button"; now.textContent="오늘";
+  now.addEventListener("click",()=>{dayPage=defaultPage(dates);renderWeek()});
+  const next=document.createElement("button"); next.type="button"; next.textContent="다음 ›";
+  next.disabled = dayPage>=pages-1;
+  next.addEventListener("click",()=>{dayPage++;renderWeek()});
   const sp=document.createElement("span"); sp.className="spacer";
   nav.append(prev,title,cnt,sp,now,next);
-
-  const grid=document.getElementById("weekview"); grid.innerHTML="";
-  offsets.forEach(i=>{
-    const d=addDays(start,i), k=iso(d);
+  shown.forEach(k=>{
+    const d=new Date(k+"T00:00:00");
     const cell=document.createElement("div");
-    cell.className="wcell"+(i===0?" sun":"")+(HOLIDAYS.includes(k)?" off":"")+(k===today?" today":"");
+    cell.className="wcell"+(k===today?" today":"");
 
     const head=document.createElement("div"); head.className="wcell-date";
     const num=document.createElement("span");
     num.textContent=(d.getMonth()+1)+". "+d.getDate()+".";
     const dw=document.createElement("span"); dw.className="dw";
-    dw.textContent=DOW[i]+(HOLIDAYS.includes(k)?" · 휴일":"");
+    dw.textContent=DOW[d.getDay()]+(k===today?" · 오늘":"");
     head.append(num,dw); cell.appendChild(head);
 
     const items=map[k]||[];
-    if(!items.length){
-      const e=document.createElement("span"); e.className="wcell-empty";
-      e.textContent = HOLIDAYS.includes(k) ? "휴무" : "—";
-      cell.appendChild(e);
-    }
 
     items.forEach(t=>{
       const id=taskId(t);
