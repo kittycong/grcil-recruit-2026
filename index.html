@@ -185,6 +185,41 @@
   .day.holiday .day-date{color:var(--muted)}
 
   .wday{margin-top:26px}
+
+  /* 실무 작업목록 — 지난 날은 접고 오늘은 펼친다 */
+  details.wday>summary{
+    list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:10px;
+    padding:0 0 5px 20px;border-bottom:2px solid var(--ink);position:relative;
+  }
+  details.wday>summary::-webkit-details-marker{display:none}
+  details.wday>summary::before{
+    content:"";position:absolute;left:4px;top:7px;
+    width:6px;height:6px;border-right:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);
+    transform:rotate(-45deg);transition:transform .15s;
+  }
+  details.wday[open]>summary::before{transform:rotate(45deg);top:5px}
+  details.wday>summary:hover .wd-date{color:var(--accent-ink)}
+  details.wday>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .wd-date{
+    font-family:"Noto Serif KR",serif;font-size:16px;font-weight:700;
+    font-variant-numeric:tabular-nums;
+  }
+  .wd-meta{font-size:12px;color:var(--muted)}
+  details.wday.past>summary{border-bottom-color:var(--line-2)}
+  details.wday.past .wd-date{color:var(--muted);font-weight:500}
+  details.wday.istoday>summary{border-bottom-color:var(--accent)}
+  details.wday.istoday .wd-date{color:var(--accent-ink)}
+  details.wday.istoday .wd-meta{color:var(--accent-ink);font-weight:700}
+
+  .workbar{
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    margin-top:18px;font-size:12.5px;color:var(--muted);
+  }
+  .workbar button{
+    font:inherit;font-size:12px;border:1px solid var(--line-2);background:var(--surface-2);
+    color:var(--ink-2);border-radius:3px;padding:3px 11px;cursor:pointer;
+  }
+  .workbar button:hover{border-color:var(--accent);color:var(--accent-ink)}
   .wday h3{
     font-family:"Noto Serif KR",serif;font-size:16px;margin:0 0 6px;
     padding-bottom:5px;border-bottom:2px solid var(--ink);font-variant-numeric:tabular-nums;
@@ -1926,16 +1961,37 @@ function docsFor(text) {
 function renderWork() {
   const box = document.getElementById("worklist");
   box.innerHTML = "";
+  const oldBar = box.parentNode.querySelector(".workbar");
+  if (oldBar) oldBar.remove();
   const rows = T.filter(t => t[3].includes("실무 담당"));
+  const today = iso(new Date());
+
+  const counts = {};
+  rows.forEach(t => { counts[t[0]] = (counts[t[0]] || 0) + 1 });
+
+  let pastDays = 0;
   let cur = null, wrap = null;
   rows.forEach(t => {
     const date = t[0], time = t[1], what = t[2], doc = t[4], level = t[5], note = t[6];
     if (date !== cur) {
       cur = date;
-      const sec = document.createElement("section");
-      sec.className = "wday";
-      const h = document.createElement("h3"); h.textContent = date;
-      sec.appendChild(h); box.appendChild(sec); wrap = sec;
+      const ds = DAYS[date] || [];
+      const isToday = ds.includes(today);
+      const past = ds.length > 0 && ds[ds.length - 1] < today;
+      if (past) pastDays++;
+
+      const sec = document.createElement("details");
+      sec.className = "wday" + (past ? " past" : "") + (isToday ? " istoday" : "");
+      sec.open = !past;
+      if (isToday) sec.id = "work-today";
+
+      const sm = document.createElement("summary");
+      const dt = document.createElement("span"); dt.className = "wd-date"; dt.textContent = date;
+      const mt = document.createElement("span"); mt.className = "wd-meta";
+      mt.textContent = counts[date] + "건" + (isToday ? " · 오늘" : past ? " · 지남" : "");
+      sm.append(dt, mt); sec.appendChild(sm);
+
+      box.appendChild(sec); wrap = sec;
     }
     const it = document.createElement("div"); it.className = "witem";
     const tm = document.createElement("span");
@@ -1978,6 +2034,37 @@ function renderWork() {
     }
     it.appendChild(tm); it.appendChild(bd); wrap.appendChild(it);
   });
+
+  const bar = document.createElement("div");
+  bar.className = "workbar";
+  const msg = document.createElement("span");
+  msg.textContent = pastDays
+    ? "지나간 " + pastDays + "일치는 접어 두었습니다."
+    : "지나간 날이 없습니다.";
+  bar.appendChild(msg);
+
+  const all = document.createElement("button");
+  all.type = "button"; all.textContent = "모두 펼치기";
+  all.addEventListener("click", () => {
+    const secs = [...box.querySelectorAll("details.wday")];
+    const open = secs.some(s => !s.open);
+    secs.forEach(s => { s.open = open });
+    all.textContent = open ? "모두 접기" : "모두 펼치기";
+  });
+  bar.appendChild(all);
+
+  const goToday = document.getElementById("work-today");
+  if (goToday) {
+    const go = document.createElement("button");
+    go.type = "button"; go.textContent = "오늘로";
+    go.addEventListener("click", () => {
+      goToday.open = true;
+      goToday.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    bar.appendChild(go);
+  }
+
+  box.parentNode.insertBefore(bar, box);
 }
 
 
