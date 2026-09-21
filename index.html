@@ -36,13 +36,14 @@
     --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.3);
   }
   *{box-sizing:border-box}
+  [hidden]{display:none!important}
   body{
     margin:0; background:var(--bg); color:var(--ink);
     font-family:"Noto Sans KR",system-ui,-apple-system,"Malgun Gothic",sans-serif;
     font-size:15px; line-height:1.65;
     -webkit-font-smoothing:antialiased;
   }
-  .wrap{max-width:900px; margin:0 auto; padding-inline:16px; padding-block:0 64px}
+  .wrap{max-width:1200px; margin:0 auto; padding-inline:16px; padding-block:0 64px}
 
   /* header */
   header.top{
@@ -67,11 +68,53 @@
     background:var(--surface); border-bottom:1px solid var(--line);
     box-shadow:0 1px 0 rgba(0,0,0,.02);
   }
-  .picker-inner{max-width:900px;margin:0 auto;padding-inline:16px;padding-block:11px}
+  .picker-inner{max-width:1200px;margin:0 auto;padding-inline:16px;padding-block:11px}
   .picker-label{
     font-size:11.5px;letter-spacing:.1em;color:var(--muted);font-weight:700;
     margin:0 0 8px;
   }
+
+  /* 고른 뒤 접힌 역할 표시 */
+  .rolenow{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .rolenow .lbl{font-size:11.5px;letter-spacing:.1em;color:var(--muted);font-weight:700}
+  .rolenow .val{
+    font-size:13px;font-weight:700;background:var(--accent);color:#fff;
+    border-radius:999px;padding:4px 13px;
+  }
+  :root[data-theme="dark"] .rolenow .val,
+  html:not([data-theme="light"]) .rolenow .val{color:#0E141A}
+  .rolenow button{
+    font:inherit;font-size:12px;border:1px solid var(--line-2);background:var(--surface-2);
+    color:var(--ink-2);border-radius:999px;padding:3px 11px;cursor:pointer;
+  }
+  .rolenow button:hover{border-color:var(--accent);color:var(--accent-ink)}
+
+  /* 오늘 · 다음 마감 */
+  .todaybar{
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    border-top:1px solid var(--line);margin-top:9px;padding-top:8px;
+    font-size:12.5px;color:var(--ink-2);
+  }
+  .todaybar .tb-today{font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+  .todaybar .tb-count{
+    font-size:11.5px;background:var(--surface-2);border:1px solid var(--line);
+    border-radius:3px;padding:1px 7px;color:var(--ink-2);
+  }
+  .todaybar .tb-next{
+    display:flex;align-items:center;gap:7px;min-width:0;
+    background:var(--warn-soft);border-left:2px solid var(--warn);
+    padding:3px 10px;border-radius:0 3px 3px 0;
+  }
+  .todaybar .tb-when{font-weight:700;color:var(--warn);font-variant-numeric:tabular-nums;flex:none}
+  .todaybar .tb-what{
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:46ch;
+  }
+  .todaybar button.tb-go{
+    font:inherit;font-size:11.5px;border:1px solid var(--accent);background:var(--accent-soft);
+    color:var(--accent-ink);border-radius:3px;padding:2px 9px;cursor:pointer;font-weight:700;flex:none;
+  }
+  .todaybar button.tb-go:hover{background:var(--accent);color:#fff}
+  @media (max-width:640px){.todaybar .tb-what{max-width:100%;white-space:normal}}
   .chips{display:flex;flex-wrap:wrap;gap:7px}
   .chip{
     font:inherit; font-size:13px; font-weight:500;
@@ -318,16 +361,41 @@
   .cell:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
   .cal-note{font-size:11.5px;color:var(--muted);margin:10px 0 0}
 
-  /* tabs */
-  .tabs{display:flex;gap:2px;margin-top:24px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  /* 본문 = 왼쪽 메뉴 + 내용 */
+  .shell{display:flex;gap:26px;align-items:flex-start;margin-top:22px}
+  .panes{flex:1;min-width:0}
+
+  .tabs{
+    flex:none;width:152px;display:flex;flex-direction:column;gap:1px;
+    position:sticky;top:104px;
+    border-right:1px solid var(--line);padding-right:10px;
+  }
   .tab{
     font:inherit;font-size:13.5px;font-weight:500;background:none;border:0;
-    border-bottom:2px solid transparent;color:var(--muted);
-    padding:8px 14px;cursor:pointer;margin-bottom:-1px;
+    border-left:2px solid transparent;color:var(--muted);
+    padding:7px 11px;cursor:pointer;text-align:left;border-radius:0 3px 3px 0;
   }
-  .tab:hover{color:var(--ink)}
-  .tab[aria-selected="true"]{color:var(--accent-ink);border-bottom-color:var(--accent);font-weight:700}
+  .tab:hover{color:var(--ink);background:var(--surface-2)}
+  .tab[aria-selected="true"]{
+    color:var(--accent-ink);border-left-color:var(--accent);
+    background:var(--accent-soft);font-weight:700;
+  }
   .tab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+
+  /* 좁은 화면에서는 가로로 눕힌다 */
+  @media (max-width:820px){
+    .shell{display:block}
+    .tabs{
+      width:auto;flex-direction:row;gap:2px;position:static;
+      border-right:0;border-bottom:1px solid var(--line);padding-right:0;
+      overflow-x:auto;scrollbar-width:thin;
+    }
+    .tab{
+      border-left:0;border-bottom:2px solid transparent;border-radius:0;
+      white-space:nowrap;padding:8px 13px;margin-bottom:-1px;
+    }
+    .tab[aria-selected="true"]{border-bottom-color:var(--accent);background:none}
+  }
 
   /* docs */
   .docgroup{margin-top:26px}
@@ -442,8 +510,16 @@
 
 <nav class="picker" aria-label="역할 선택">
   <div class="picker-inner">
-    <p class="picker-label">내 역할을 고르세요</p>
-    <div class="chips" id="chips" role="group"></div>
+    <div id="rolepick">
+      <p class="picker-label">내 역할을 고르세요</p>
+      <div class="chips" id="chips" role="group"></div>
+    </div>
+    <div class="rolenow" id="rolenow" hidden>
+      <span class="lbl">내 역할</span>
+      <span class="val" id="rolenow-val"></span>
+      <button type="button" id="rolenow-change">바꾸기</button>
+    </div>
+    <div class="todaybar" id="todaybar" hidden></div>
   </div>
 </nav>
 
@@ -462,6 +538,8 @@
 
   
 
+  <div class="shell">
+
   <div class="tabs" role="tablist" id="tabs">
     <button class="tab" type="button" role="tab" data-panel="tasks" aria-selected="true">할 일</button>
     <button class="tab" type="button" role="tab" data-panel="work" aria-selected="false">실무 작업목록</button>
@@ -472,7 +550,9 @@
     <button class="tab" type="button" role="tab" data-panel="flow" aria-selected="false">전체 흐름</button>
   </div>
 
-  <p style="font-size:12.5px;color:var(--muted);margin:18px 0 0">
+  <div class="panes">
+
+  <p style="font-size:12.5px;color:var(--muted);margin:0 0 4px">
     채용 진행 일정·통지 문안·서식 목록을 함께 보기 위한 안내입니다. 실제 기준은 게시된 채용공고와 인사위원회 의결 사항입니다.
     응시자 개인정보, 평가 문항과 채점 기준, 위원 명단은 담고 있지 않습니다. 체크 표시는 보시는 분의 브라우저에만 저장됩니다.
   </p>
@@ -486,7 +566,7 @@
   <section id="panel-work" hidden>
     <p style="font-size:13px;color:var(--muted);margin:22px 0 0">
       실무 담당이 직접 하는 일만 날짜순으로 모았습니다. 회색 칩을 누르면 <b>그 문서의 내용이 이 화면에서 바로 펼쳐집니다.</b>
-      파일을 열어야 할 때는 파일은 담당자 PC의 해당 폴더에 있습니다.
+      원본 파일은 담당자 PC의 해당 폴더에 있습니다.
     </p>
     <div id="worklist"></div>
   </section>
@@ -543,6 +623,9 @@
     </p>
     <div id="duplist"></div>
   </section>
+
+  </div>
+  </div>
 
   <footer>
     <p>근거 문서 — 제2차회의 소집통지 발송 작업지시서(9.18) · 채용 실무 작업지시서 9.21~9.30 · 10.1~12.31 · 응시자 통지 문안집 v1.2 · 실기시험 실시요령 v1.1 · 최종 환산표 v1.1 · 시용기간 평가 실시계획 v1.2</p>
@@ -721,6 +804,7 @@ const store={
 };
 
 let role = store.get("role","전체");
+let pickOpen = false;
 let done = store.get("done",{});
 
 const chipsEl=document.getElementById("chips");
@@ -728,7 +812,7 @@ const chipsEl=document.getElementById("chips");
   const b=document.createElement("button");
   b.className="chip"; b.type="button"; b.textContent=r;
   b.setAttribute("aria-pressed", String(r===role));
-  b.addEventListener("click",()=>{role=r;store.set("role",r);render()});
+  b.addEventListener("click",()=>{role=r;store.set("role",r);pickOpen=false;render()});
   chipsEl.appendChild(b);
 });
 
@@ -878,7 +962,81 @@ function render(){
   renderWork();
   renderMsg();
   renderDup();
+  renderRoleBar();
+  renderToday();
   tally();
+}
+
+// ── 역할 줄 (고른 뒤에는 접는다) ──────────────────────
+function renderRoleBar(){
+  const pick=document.getElementById("rolepick");
+  const now=document.getElementById("rolenow");
+  const open = (role==="전체") || pickOpen;
+  pick.hidden = !open;
+  now.hidden = open;
+  if(!open) document.getElementById("rolenow-val").textContent = role;
+}
+document.getElementById("rolenow-change").addEventListener("click",()=>{
+  pickOpen=true; render();
+});
+
+// ── 오늘 · 다음 마감 ─────────────────────────────────
+const TIME_RE=/\d{1,2}:\d{2}/;
+const stripTags=s=>String(s||"").replace(/<[^>]+>/g,"");
+
+function scheduleItems(){
+  const rows = role==="전체" ? T : T.filter(t=>t[3].includes(role));
+  const out=[];
+  rows.forEach(t=>{
+    (DAYS[t[0]]||[]).forEach(d=>out.push({iso:d,label:t[0],time:t[1],what:stripTags(t[2])}));
+  });
+  return out.sort((a,b)=> a.iso<b.iso ? -1 : a.iso>b.iso ? 1 : 0);
+}
+
+function renderToday(){
+  const bar=document.getElementById("todaybar");
+  const items=scheduleItems();
+  if(!items.length){ bar.hidden=true; return }
+
+  const today=iso(new Date());
+  const todays=items.filter(x=>x.iso===today);
+  const ahead=items.filter(x=>x.iso>=today);
+  const next=ahead.find(x=>TIME_RE.test(x.time)) || ahead[0];
+  const target = todays.length ? todays[0].label : (next ? next.label : null);
+
+  bar.hidden=false;
+  bar.innerHTML="";
+
+  const when=document.createElement("span");
+  when.className="tb-today";
+  when.textContent = todays.length
+    ? "오늘 "+todays[0].label
+    : "오늘 "+Number(today.slice(5,7))+". "+Number(today.slice(8,10))+".";
+  bar.appendChild(when);
+
+  const cnt=document.createElement("span");
+  cnt.className="tb-count";
+  cnt.textContent = todays.length ? "할 일 "+todays.length+"건" : "오늘 할 일 없음";
+  bar.appendChild(cnt);
+
+  if(next){
+    const box=document.createElement("span"); box.className="tb-next";
+    const w=document.createElement("span"); w.className="tb-when";
+    w.textContent="다음 "+next.label+(next.time?" "+next.time:"");
+    const t=document.createElement("span"); t.className="tb-what"; t.textContent=next.what;
+    box.append(w,t); bar.appendChild(box);
+  }
+
+  if(target){
+    const go=document.createElement("button");
+    go.className="tb-go"; go.type="button"; go.textContent="그날 할 일 보기";
+    go.addEventListener("click",()=>{
+      setTab("tasks");
+      const sec=document.querySelector('[data-day="'+target+'"]');
+      if(sec) sec.scrollIntoView({behavior:"smooth",block:"start"});
+    });
+    bar.appendChild(go);
+  }
 }
 
 function tally(){
@@ -1180,8 +1338,8 @@ function renderDup(){
 
 
 // ── 실무 작업목록 ────────────────────────────────────
-const P_BOSS = "Downloads\\사무국장_정정공고_20260918\\대표님 18일 수정 요청\\21확인요청 실무자 전달용[260921]";
-const P_B2   = "Downloads\\사무국장_정정공고_20260918\\대표님 18일 수정 요청\\묶음2_0921_전달_9월_실무_워드-4";
+const P_BOSS = "문서 폴더";
+const P_B2   = "문서 폴더";
 const P_FORM = "문서 폴더";
 const P_SEND = "문서 폴더";
 const P_ATT  = "문서 폴더";
