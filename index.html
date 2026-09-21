@@ -1288,18 +1288,23 @@ function setTaskView(v){
 function renderWeek(){
   if(!weekAnchor) weekAnchor=defaultWeek();
   const map=tasksByDay();
-  const start=weekAnchor, end=addDays(start,6);
+  const start=weekAnchor;
   const today=iso(new Date());
 
+  // 주말은 빼고 월~금만 보여준다. 주말에 할 일이 있으면 그 칸만 뒤에 붙인다.
+  const offsets=[1,2,3,4,5];
+  [6,0].forEach(o=>{ if((map[iso(addDays(start,o))]||[]).length) offsets.push(o) });
+  offsets.sort((a,b)=>(a===0?7:a)-(b===0?7:b));
+
   let count=0;
-  for(let i=0;i<7;i++) count += (map[iso(addDays(start,i))]||[]).length;
+  offsets.forEach(o=>{ count += (map[iso(addDays(start,o))]||[]).length });
 
   const nav=document.getElementById("weeknav"); nav.innerHTML="";
   const prev=document.createElement("button"); prev.type="button"; prev.textContent="‹ 지난주";
   prev.addEventListener("click",()=>{weekAnchor=addDays(start,-7);renderWeek()});
   const title=document.createElement("span"); title.className="wk";
   const fmt=d=>(d.getMonth()+1)+". "+d.getDate()+".";
-  title.textContent=start.getFullYear()+". "+fmt(start)+" ~ "+fmt(end);
+  title.textContent=start.getFullYear()+". "+fmt(addDays(start,1))+" ~ "+fmt(addDays(start,5));
   const cnt=document.createElement("span"); cnt.className="wkcount";
   cnt.textContent="이 주 할 일 "+count+"건";
   const next=document.createElement("button"); next.type="button"; next.textContent="다음주 ›";
@@ -1310,7 +1315,7 @@ function renderWeek(){
   nav.append(prev,title,cnt,sp,now,next);
 
   const grid=document.getElementById("weekview"); grid.innerHTML="";
-  for(let i=0;i<7;i++){
+  offsets.forEach(i=>{
     const d=addDays(start,i), k=iso(d);
     const cell=document.createElement("div");
     cell.className="wcell"+(i===0?" sun":"")+(HOLIDAYS.includes(k)?" off":"")+(k===today?" today":"");
@@ -1357,7 +1362,7 @@ function renderWeek(){
     });
 
     grid.appendChild(cell);
-  }
+  });
 }
 
 [...document.getElementById("viewtoggle").children].forEach(b=>{
