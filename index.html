@@ -1,4 +1,4 @@
-<title>사무국장 채용 일정 안내</title>
+<title>사무국장 채용 실무 안내</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Noto+Serif+KR:wght@500;600;700&display=swap">
@@ -435,7 +435,7 @@
 <header class="top">
   <div class="wrap" style="padding-block:0">
     <p class="eyebrow">구로장애인자립생활센터 · 2026년 사무국장 공개채용</p>
-    <h1>사무국장 채용 일정 안내</h1>
+    <h1>사무국장 채용 실무 안내</h1>
     <p class="sub">공고 <b>GR2026-A-103호</b> (2026. 9. 8.) · 정정공고 <b>GR2026-A-109호</b> (2026. 9. 18.) — 인사위원회 제2차 회의 통지부터 시용기간 만료까지</p>
   </div>
 </header>
@@ -464,15 +464,17 @@
 
   <div class="tabs" role="tablist" id="tabs">
     <button class="tab" type="button" role="tab" data-panel="tasks" aria-selected="true">할 일</button>
+    <button class="tab" type="button" role="tab" data-panel="work" aria-selected="false">실무 작업목록</button>
     <button class="tab" type="button" role="tab" data-panel="msg" aria-selected="false">문안 모음</button>
     <button class="tab" type="button" role="tab" data-panel="cal" aria-selected="false">달력</button>
+    <button class="tab" type="button" role="tab" data-panel="forms" aria-selected="false">서식</button>
     <button class="tab" type="button" role="tab" data-panel="docs" aria-selected="false">문서</button>
     <button class="tab" type="button" role="tab" data-panel="flow" aria-selected="false">전체 흐름</button>
   </div>
 
   <p style="font-size:12.5px;color:var(--muted);margin:18px 0 0">
-    진행 일정과 통지 문안을 함께 보기 위한 안내입니다. 실제 기준은 게시된 채용공고와 인사위원회 의결 사항입니다.
-    응시자 개인정보와 평가 문항·채점 기준은 담고 있지 않습니다. 체크 표시는 보시는 분의 브라우저에만 저장됩니다.
+    채용 진행 일정·통지 문안·서식 목록을 함께 보기 위한 안내입니다. 실제 기준은 게시된 채용공고와 인사위원회 의결 사항입니다.
+    응시자 개인정보, 평가 문항과 채점 기준, 위원 명단은 담고 있지 않습니다. 체크 표시는 보시는 분의 브라우저에만 저장됩니다.
   </p>
 
   <div class="progress" id="panel-tasks-progress">
@@ -484,7 +486,7 @@
   <section id="panel-work" hidden>
     <p style="font-size:13px;color:var(--muted);margin:22px 0 0">
       실무 담당이 직접 하는 일만 날짜순으로 모았습니다. 회색 칩을 누르면 <b>그 문서의 내용이 이 화면에서 바로 펼쳐집니다.</b>
-      파일을 열어야 할 때는 「경로 복사」를 눌러 탐색기 주소창에 붙여 넣으십시오.
+      파일을 열어야 할 때는 파일은 담당자 PC의 해당 폴더에 있습니다.
     </p>
     <div id="worklist"></div>
   </section>
@@ -514,7 +516,7 @@
 
   <section id="panel-forms" hidden>
     <p style="font-size:13px;color:var(--muted);margin:22px 0 0">
-      바탕화면 <b>「사무국장 채용 실무서식(휘원)」</b> 폴더에 있습니다. 번호가 쓰는 순서입니다.
+      실무서식 폴더(01~12번)에 있습니다. 번호가 쓰는 순서입니다.
       대표님 문서에 이미 있는 서식(서류심사 결과표, 면접 평가표, 실기 채점표, 최종 환산표, 회의록 작성본)은
       그대로 쓰시고 여기에 다시 만들지 않았습니다.
     </p>
@@ -805,8 +807,7 @@ function render(){
     brief.innerHTML="<h2>"+role+"</h2><p>"+b.line+"</p><ul>"+b.keys.map(k=>"<li>"+k+"</li>").join("")+"</ul>";
   } else { brief.hidden=true; }
 
-  const base = T.filter(t=>t[5]!==2);
-  const rows = role==="전체" ? base : base.filter(t=>t[3].includes(role));
+  const rows = role==="전체" ? T : T.filter(t=>t[3].includes(role));
   const list=document.getElementById("list");
   list.innerHTML="";
 
@@ -860,7 +861,6 @@ function render(){
     });
     if(doc){
       doc.split(" · ").forEach(x=>{
-        if(x.trim().startsWith("서식")) return;
         const c=document.createElement("span");
         c.className = x.trim().startsWith("서식") ? "chipdoc form" : "chipdoc";
         c.textContent=x.trim(); meta.appendChild(c);
@@ -882,8 +882,7 @@ function render(){
 }
 
 function tally(){
-  const base = T.filter(t=>t[5]!==2);
-  const rows = role==="전체" ? base : base.filter(t=>t[3].includes(role));
+  const rows = role==="전체" ? T : T.filter(t=>t[3].includes(role));
   const n=rows.length, c=rows.filter(t=>done[taskId(t)]).length;
   document.getElementById("count").textContent=c+" / "+n;
   document.getElementById("fill").style.width=n?(c/n*100)+"%":"0%";
@@ -1183,9 +1182,9 @@ function renderDup(){
 // ── 실무 작업목록 ────────────────────────────────────
 const P_BOSS = "Downloads\\사무국장_정정공고_20260918\\대표님 18일 수정 요청\\21확인요청 실무자 전달용[260921]";
 const P_B2   = "Downloads\\사무국장_정정공고_20260918\\대표님 18일 수정 요청\\묶음2_0921_전달_9월_실무_워드-4";
-const P_FORM = "바탕화면\\사무국장 채용 실무서식(휘원)_0921개정";
-const P_SEND = "바탕화면\\사무국장 채용 발신문안(휘원)\\사무국장 채용 발신 문안집.docx";
-const P_ATT  = "바탕화면\\인사위 제2차 붙임자료(hwpx)";
+const P_FORM = "문서 폴더";
+const P_SEND = "문서 폴더";
+const P_ATT  = "문서 폴더";
 
 const VIEW = {
  "문안 · 서류합격": ["서류심사 합격 안내 및 응시 편의 문의", P_SEND,
@@ -1864,8 +1863,9 @@ function renderMsg() {
 let tab = store.get("tab","tasks");
 const PANELS={
   tasks:["panel-tasks-progress","list"],
+  work:["panel-work"],
   msg:["panel-msg"],
-  cal:["panel-cal"], docs:["panel-docs"], flow:["panel-flow"]
+  cal:["panel-cal"], forms:["panel-forms"], docs:["panel-docs"], flow:["panel-flow"]
 };
 function setTab(name){
   tab=name; store.set("tab",name);
